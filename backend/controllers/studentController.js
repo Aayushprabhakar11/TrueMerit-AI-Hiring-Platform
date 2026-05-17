@@ -6,12 +6,14 @@ const { invalidateCacheByPrefix } = require('../services/cacheService');
 const pdfParseLib = require('pdf-parse');
 
 const parsePdfText = async (buffer) => {
+  const dataBuffer = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+
   if (typeof pdfParseLib === 'function') {
-    const data = await pdfParseLib(buffer);
+    const data = await pdfParseLib(dataBuffer);
     return data.text || data;
   }
 
-  const pdf = new pdfParseLib.PDFParse(buffer);
+  const pdf = new pdfParseLib.PDFParse(dataBuffer);
   return await pdf.getText();
 };
 
