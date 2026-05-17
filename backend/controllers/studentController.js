@@ -164,30 +164,40 @@ const uploadCertificate = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
-    const { verifyCertificate } = require('../services/aiService');
+    const { verifyCertificate, verifyCertificatePdf } = require('../services/aiService');
     const { certName, issuerName } = req.body;
-
-    // Convert buffer to base64
-    const imageBase64 = req.file.buffer.toString('base64');
-    const imageType = req.file.mimetype;
-
-    // Run AI Certificate Forensics Agent
-    const verificationResult = await verifyCertificate(imageBase64, imageType, certName, issuerName);
 
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Add or update the certification entry
-    const certEntry = {
+    let verificationResult;
+    let certEntry = {
       name: certName || 'Untitled Certificate',
       issuer: issuerName || 'Unknown Issuer',
       date: new Date(),
-      imageBase64,
-      imageType,
-      verificationStatus: verificationResult.verdict || 'pending',
-      verificationScore: verificationResult.confidence_score || 0,
-      verificationDetails: verificationResult.summary || ''
+      imageType: req.file.mimetype,
+      verificationStatus: 'pending',
+      verificationScore: 0,
+      verificationDetails: ''
     };
+
+    if (req.file.mimetype === 'application/pdf') {
+      const pdfParse = require('pdf-parse');
+      const data = await pdfParse(req.file.buffer);
+      const pdfText = data.text || '';
+      verificationResult = await verifyCertificatePdf(pdfText, certName, issuerName);
+      certEntry.pdfText = pdfText;
+      certEntry.fileName = req.file.originalname;
+    } else {
+      const imageBase64 = req.file.buffer.toString('base64');
+      verificationResult = await verifyCertificate(imageBase64, req.file.mimetype, certName, issuerName);
+      certEntry.imageBase64 = imageBase64;
+      certEntry.fileName = req.file.originalname;
+    }
+
+    certEntry.verificationStatus = verificationResult.verdict || 'pending';
+    certEntry.verificationScore = verificationResult.confidence_score || 0;
+    certEntry.verificationDetails = verificationResult.summary || '';
 
     user.certifications = user.certifications || [];
     user.certifications.push(certEntry);
@@ -201,6 +211,7 @@ const uploadCertificate = async (req, res) => {
       certification: certEntry
     });
   } catch (error) {
+    console.error('Certificate upload error:', error);
     res.status(500).json({ message: error.message });
   }
 };

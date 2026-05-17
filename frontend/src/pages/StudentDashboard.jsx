@@ -86,10 +86,7 @@ const StudentDashboard = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.post('http://localhost:5000/api/students/upload-linkedin', formData, {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
       alert('LinkedIn Profile (PDF) uploaded and parsed successfully by AI!');
       // Refresh user profile
@@ -98,7 +95,7 @@ const StudentDashboard = () => {
       });
       setUser(res.data);
     } catch (err) {
-      alert('Failed to upload LinkedIn PDF');
+      alert(err.response?.data?.message || 'Failed to upload LinkedIn PDF');
       console.error(err);
     } finally {
       setLoading(false);
@@ -123,10 +120,7 @@ const StudentDashboard = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.post('http://localhost:5000/api/students/upload-certificate', formData, {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
       alert('Certificate uploaded and verified by AI!');
       const res = await axios.get('http://localhost:5000/api/auth/profile', {
@@ -134,7 +128,7 @@ const StudentDashboard = () => {
       });
       setUser(res.data);
     } catch (err) {
-      alert('Failed to upload Certificate');
+      alert(err.response?.data?.message || 'Failed to upload Certificate');
       console.error(err);
     } finally {
       setLoading(false);
