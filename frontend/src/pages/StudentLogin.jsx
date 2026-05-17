@@ -1,5 +1,6 @@
 import { useState, useContext, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { Mail, Lock, AlertCircle, ArrowRight, BrainCircuit } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -8,6 +9,8 @@ const StudentLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [githubEnabled, setGithubEnabled] = useState(true);
+  const [searchParams] = useSearchParams();
   const { user, login } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -17,7 +20,28 @@ const StudentLogin = () => {
     }
   }, [user, navigate]);
 
+  useEffect(() => {
+    const oauthError = searchParams.get('oauthError');
+    if (oauthError) {
+      setError(oauthError);
+    }
+
+    const fetchGithubConfig = async () => {
+      try {
+        const res = await axios.get('http://localhost:5000/api/auth/github/config');
+        setGithubEnabled(res.data.enabled);
+      } catch (err) {
+        setGithubEnabled(false);
+      }
+    };
+    fetchGithubConfig();
+  }, [searchParams]);
+
   const handleGitHubLogin = () => {
+    if (!githubEnabled) {
+      setError('GitHub OAuth is not configured on the server. Use email and password login instead.');
+      return;
+    }
     window.location.href = 'http://localhost:5000/api/auth/github?role=student';
   };
 
@@ -53,7 +77,7 @@ const StudentLogin = () => {
         )}
 
         <div className="mb-6">
-          <button type="button" onClick={handleGitHubLogin} className="w-full bg-[#0A0D14] hover:bg-[#151921] text-white border border-gray-700/50 py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-3 shadow-sm group">
+          <button type="button" onClick={handleGitHubLogin} disabled={!githubEnabled} className="w-full bg-[#0A0D14] hover:bg-[#151921] text-white border border-gray-700/50 py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-3 shadow-sm group disabled:opacity-50 disabled:cursor-not-allowed">
             <span className="font-mono font-black text-lg -mt-0.5 text-gray-400 group-hover:text-white transition">@</span> Continue with GitHub
           </button>
         </div>

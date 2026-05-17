@@ -140,10 +140,12 @@ const githubAuth = async (req, res) => {
   try {
     const role = req.query.role === 'recruiter' ? 'recruiter' : 'student';
     const clientId = process.env.GITHUB_CLIENT_ID;
+    const clientSecret = process.env.GITHUB_CLIENT_SECRET;
     const redirectUri = `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/github/callback`;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5174';
 
-    if (!clientId) {
-      return res.status(500).json({ message: 'GitHub OAuth is not configured on the server.' });
+    if (!clientId || !clientSecret) {
+      return res.redirect(`${frontendUrl}/login/student?oauthError=${encodeURIComponent('GitHub OAuth is not configured on the server. Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in backend/.env.')}`);
     }
 
     const state = Buffer.from(JSON.stringify({ role })).toString('base64');
@@ -151,8 +153,17 @@ const githubAuth = async (req, res) => {
     return res.redirect(githubUrl);
   } catch (error) {
     console.error('GitHub auth redirect error:', error);
-    res.status(500).json({ message: 'Failed to start GitHub OAuth.' });
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5174';
+    return res.redirect(`${frontendUrl}/login/student?oauthError=${encodeURIComponent('Failed to start GitHub OAuth. Please try again later.')}`);
   }
+};
+
+const githubConfig = async (req, res) => {
+  const enabled = Boolean(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET);
+  return res.json({
+    enabled,
+    message: enabled ? 'GitHub OAuth enabled' : 'GitHub OAuth is not configured. Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in backend/.env',
+  });
 };
 
 const githubCallback = async (req, res) => {
@@ -242,4 +253,4 @@ const githubCallback = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, authUser, getUserProfile, githubAuth, githubCallback };
+module.exports = { registerUser, authUser, getUserProfile, githubAuth, githubCallback, githubConfig };
