@@ -3,6 +3,17 @@ const Project = require('../models/Project');
 const { fetchGithubData } = require('../services/githubService');
 const { calculateTrueMeritScore, evaluateProjectExpert } = require('../services/aiService');
 const { invalidateCacheByPrefix } = require('../services/cacheService');
+const pdfParseLib = require('pdf-parse');
+
+const parsePdfText = async (buffer) => {
+  if (typeof pdfParseLib === 'function') {
+    const data = await pdfParseLib(buffer);
+    return data.text || data;
+  }
+
+  const pdf = new pdfParseLib.PDFParse(buffer);
+  return await pdf.getText();
+};
 
 // @desc    Update student profile & sync github
 // @route   PUT /api/students/profile
@@ -143,8 +154,7 @@ const getProjects = async (req, res) => {
 const uploadLinkedinPdf = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
-    const pdfParse = require('pdf-parse');
-    const data = await pdfParse(req.file.buffer);
+    const pdfText = await parsePdfText(req.file.buffer);
 
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: 'User not found' });
@@ -182,9 +192,7 @@ const uploadCertificate = async (req, res) => {
     };
 
     if (req.file.mimetype === 'application/pdf') {
-      const pdfParse = require('pdf-parse');
-      const data = await pdfParse(req.file.buffer);
-      const pdfText = data.text || '';
+      const pdfText = await parsePdfText(req.file.buffer);
       verificationResult = await verifyCertificatePdf(pdfText, certName, issuerName);
       certEntry.pdfText = pdfText;
       certEntry.fileName = req.file.originalname;
