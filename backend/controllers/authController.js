@@ -15,10 +15,23 @@ const registerUser = async (req, res) => {
   try {
     const { name, email, password, role, githubUsername } = req.body;
 
+    // Validation
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ message: 'Please provide all required fields: name, email, password, role' });
+    }
+
+    if (role === 'student' && !githubUsername) {
+      return res.status(400).json({ message: 'GitHub username is required for student registration' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+    }
+
     const userExists = await User.findOne({ email });
 
     if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ message: 'Email already registered. Please use a different email or login.' });
     }
 
     const user = await User.create({
@@ -42,6 +55,7 @@ const registerUser = async (req, res) => {
     }
 
     if (user) {
+      console.log(`✓ New user registered: ${user.email} (${user.role})`);
       res.status(201).json({
         _id: user._id,
         name: user.name,
@@ -50,10 +64,11 @@ const registerUser = async (req, res) => {
         token: generateToken(user._id),
       });
     } else {
-      res.status(400).json({ message: 'Invalid user data' });
+      res.status(400).json({ message: 'Failed to create user account' });
     }
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Registration error:', error);
+    res.status(500).json({ message: error.message || 'Registration failed. Please try again.' });
   }
 };
 
