@@ -54,7 +54,7 @@ const STRENGTH_CONFIG = [
 
 const SignupForm = () => {
   const [formData, setFormData] = useState({
-    name: '', email: '', password: '', role: 'student', githubUsername: ''
+    name: '', email: '', password: '', role: 'student', githubUsername: '', verificationCode: ''
   });
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState('');
@@ -74,11 +74,20 @@ const SignupForm = () => {
       setError('GitHub username is required for student verification.');
       return;
     }
+    if (formData.role === 'student' && !formData.verificationCode.trim()) {
+      setError('A valid student verification code is required to register as a student.');
+      return;
+    }
     try {
       setLoading(true);
       setError('');
       const userData = await register(
-        formData.name, formData.email, formData.password, formData.role, formData.githubUsername
+        formData.name,
+        formData.email,
+        formData.password,
+        formData.role,
+        formData.githubUsername,
+        formData.verificationCode.trim()
       );
       if (userData.role === 'student') navigate('/student-dashboard');
       else navigate('/recruiter-dashboard');
@@ -202,6 +211,34 @@ const SignupForm = () => {
                 : null
             }
           />
+
+          {/* Verification Code — student only */}
+          <AnimatePresence>
+            {formData.role === 'student' && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="mb-2">
+                  <FloatingInput
+                    id="verificationCode"
+                    label="Student Verification Code"
+                    value={formData.verificationCode}
+                    onChange={set('verificationCode')}
+                    required
+                    rightEl={
+                      formData.verificationCode.length > 0
+                        ? <Check size={14} className="text-blue-400" />
+                        : null
+                    }
+                  />
+                  <p className="text-xs text-gray-500 mt-2">Enter the student access code provided by TrueMerit to register.</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* GitHub Username — student only */}
           <AnimatePresence>

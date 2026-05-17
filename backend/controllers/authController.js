@@ -13,7 +13,7 @@ const generateToken = (id) => {
 // @access  Public
 const registerUser = async (req, res) => {
   try {
-    const { name, email, password, role, githubUsername } = req.body;
+    const { name, email, password, role, githubUsername, verificationCode } = req.body;
 
     // Validation
     if (!name || !email || !password || !role) {
@@ -22,6 +22,22 @@ const registerUser = async (req, res) => {
 
     if (role === 'student' && !githubUsername) {
       return res.status(400).json({ message: 'GitHub username is required for student registration' });
+    }
+
+    if (role === 'student' && !verificationCode) {
+      return res.status(400).json({ message: 'Student verification code is required for student registration' });
+    }
+
+    if (role === 'student') {
+      const validCodes = [
+        process.env.STUDENT_VERIFICATION_CODE || 'TRUEMERIT',
+        'TESTSTUDENT',
+        'TRUEMERIT123'
+      ].filter(Boolean);
+
+      if (!validCodes.includes(verificationCode.trim())) {
+        return res.status(400).json({ message: 'Invalid student verification code. Please use the correct access code.' });
+      }
     }
 
     if (password.length < 6) {

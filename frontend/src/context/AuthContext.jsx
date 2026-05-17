@@ -38,8 +38,15 @@ export const AuthProvider = ({ children }) => {
     return fullUser || res.data;
   };
 
-  const register = async (name, email, password, role, githubUsername) => {
-    const res = await axios.post('http://localhost:5000/api/auth/register', { name, email, password, role, githubUsername });
+  const register = async (name, email, password, role, githubUsername, verificationCode) => {
+    const res = await axios.post('http://localhost:5000/api/auth/register', {
+      name,
+      email,
+      password,
+      role,
+      githubUsername,
+      verificationCode,
+    });
     localStorage.setItem('token', res.data.token);
     const fullUser = await fetchUserProfile(res.data.token);
     return fullUser || res.data;
