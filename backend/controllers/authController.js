@@ -1,3 +1,5 @@
+const axios = require('axios');
+const crypto = require('crypto');
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const { fetchGithubData } = require('../services/githubService');
@@ -134,4 +136,110 @@ const getUserProfile = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, authUser, getUserProfile };
+const githubAuth = async (req, res) => {
+  try {
+    const role = req.query.role === 'recruiter' ? 'recruiter' : 'student';
+    const clientId = process.env.GITHUB_CLIENT_ID;
+    const redirectUri = `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/github/callback`;
+
+    if (!clientId) {
+      return res.status(500).json({ message: 'GitHub OAuth is not configured on the server.' });
+    }
+
+    const state = Buffer.from(JSON.stringify({ role })).toString('base64');
+    const githubUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=read:user user:email&state=${encodeURIComponent(state)}`;
+    return res.redirect(githubUrl);
+  } catch (error) {
+    console.error('GitHub auth redirect error:', error);
+    res.status(500).json({ message: 'Failed to start GitHub OAuth.' });
+  }
+};
+
+const githubCallback = async (req, res) => {
+  try {
+    const { code, state: encodedState } = req.query;
+    if (!code) {
+      return res.status(400).json({ message: 'GitHub authorization code is missing.' });
+    }
+
+    const redirectUri = `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/github/callback`;
+    const tokenRes = await axios.post(
+      'https://github.com/login/oauth/access_token',
+      {
+        client_id: process.env.GITHUB_CLIENT_ID,
+        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        code,
+        redirect_uri: redirectUri,
+        state: encodedState,
+      },
+      { headers: { Accept: 'application/json' } }
+    );
+
+    const accessToken = tokenRes.data?.access_token;
+    if (!accessToken) {
+      return res.status(500).json({ message: 'Failed to obtain GitHub access token.' });
+    }
+
+    const authHeaders = {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: 'application/vnd.github+json',
+    };
+
+    const profileRes = await axios.get('https://api.github.com/user', { headers: authHeaders });
+    const emailsRes = await axios.get('https://api.github.com/user/emails', { headers: authHeaders });
+
+    const githubProfile = profileRes.data;
+    const emails = Array.isArray(emailsRes.data) ? emailsRes.data : [];
+    const primaryEmail = emails.find((item) => item.primary && item.verified)?.email
+      || emails.find((item) => item.verified)?.email
+      || githubProfile.email;
+
+    if (!primaryEmail) {
+      return res.status(400).json({ message: 'Your GitHub account does not expose a verified email address.' });
+    }
+
+    let role = 'student';
+    if (encodedState) {
+      try {
+        const state = JSON.parse(Buffer.from(encodedState, 'base64').toString('utf8'));
+        if (state.role === 'recruiter') role = 'recruiter';
+      } catch (error) {
+        console.warn('Invalid GitHub OAuth state:', error);
+      }
+    }
+
+    let user = await User.findOne({ email: primaryEmail });
+    if (user) {
+      if (user.role !== role) {
+        return res.status(400).json({ message: `You are registered as a ${user.role}. Please login from the correct role or use email login.` });
+      }
+    } else {
+      const randomPassword = crypto.randomBytes(16).toString('hex');
+      const userData = {
+        name: githubProfile.name || githubProfile.login || primaryEmail.split('@')[0],
+        email: primaryEmail,
+        password: randomPassword,
+        role,
+        githubUsername: githubProfile.login,
+      };
+
+      if (role === 'student') {
+        const ghData = await fetchGithubData(githubProfile.login);
+        if (ghData) {
+          userData.githubData = ghData;
+        }
+      }
+
+      user = await User.create(userData);
+    }
+
+    const token = generateToken(user._id);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5174';
+    return res.redirect(`${frontendUrl}/oauth-success?token=${token}`);
+  } catch (error) {
+    console.error('GitHub OAuth callback error:', error.response?.data || error.message || error);
+    res.status(500).json({ message: 'GitHub OAuth sign-in failed. Please try again.' });
+  }
+};
+
+module.exports = { registerUser, authUser, getUserProfile, githubAuth, githubCallback };

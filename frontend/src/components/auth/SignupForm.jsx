@@ -68,6 +68,11 @@ const SignupForm = () => {
 
   const set = (key) => (e) => setFormData(prev => ({ ...prev, [key]: e.target.value }));
 
+  const handleGitHubAuth = () => {
+    const role = formData.role || 'student';
+    window.location.href = `http://localhost:5000/api/auth/github?role=${role}`;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (formData.role === 'student' && !formData.githubUsername) {
@@ -126,6 +131,7 @@ const SignupForm = () => {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-6">
           <button
             type="button"
+            onClick={handleGitHubAuth}
             className="w-full group bg-[#0D1117] hover:bg-[#161B22] border border-[#30363D] hover:border-[#8B949E]/60 text-white py-3.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-3"
           >
             <svg viewBox="0 0 24 24" className="w-5 h-5 text-white fill-current" xmlns="http://www.w3.org/2000/svg">

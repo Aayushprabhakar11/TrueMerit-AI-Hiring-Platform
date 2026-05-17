@@ -9,7 +9,7 @@ async function test() {
     
     // Create test student
     await User.create({ 
-      name: 'John Student', 
+      name: 'John', 
       email: 'student@test.com', 
       password: 'password123', 
       role: 'student',

@@ -6,6 +6,7 @@ import RecruiterLogin from './pages/RecruiterLogin';
 import Register from './pages/Register';
 import StudentDashboard from './pages/StudentDashboard';
 import RecruiterDashboard from './pages/RecruiterDashboard';
+import OauthSuccess from './pages/OauthSuccess';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
             <Route path="/login/student" element={<StudentLogin />} />
             <Route path="/login/recruiter" element={<RecruiterLogin />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/oauth-success" element={<OauthSuccess />} />
             
             <Route 
               path="/student-dashboard" 

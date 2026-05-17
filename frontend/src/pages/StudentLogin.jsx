@@ -17,6 +17,10 @@ const StudentLogin = () => {
     }
   }, [user, navigate]);
 
+  const handleGitHubLogin = () => {
+    window.location.href = 'http://localhost:5000/api/auth/github?role=student';
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -49,7 +53,7 @@ const StudentLogin = () => {
         )}
 
         <div className="mb-6">
-          <button type="button" className="w-full bg-[#0A0D14] hover:bg-[#151921] text-white border border-gray-700/50 py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-3 shadow-sm group">
+          <button type="button" onClick={handleGitHubLogin} className="w-full bg-[#0A0D14] hover:bg-[#151921] text-white border border-gray-700/50 py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-3 shadow-sm group">
             <span className="font-mono font-black text-lg -mt-0.5 text-gray-400 group-hover:text-white transition">@</span> Continue with GitHub
           </button>
         </div>
